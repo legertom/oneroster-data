@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -168,13 +167,31 @@ export default function GeneratorPage() {
           </Section>
 
           <Section title="Academic Year">
-            <SliderRow
-              label="Start year"
-              value={config.academicYear}
-              min={2020} max={2030} step={1}
-              hint={`School year ${config.academicYear}–${config.academicYear + 1} with fall + spring terms.`}
-              onChange={(v) => set("academicYear", v)}
-            />
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">School year</Label>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {[2023, 2024, 2025, 2026, 2027, 2028].map((year) => {
+                  const active = config.academicYear === year;
+                  return (
+                    <button
+                      key={year}
+                      onClick={() => set("academicYear", year)}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                      style={
+                        active
+                          ? { backgroundColor: "#1464FF", color: "#fff", borderColor: "#1464FF" }
+                          : { backgroundColor: "#fff", color: "#444", borderColor: "#DAEBFF" }
+                      }
+                    >
+                      {year}–{year + 1}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground pt-1">
+                Generates fall + spring terms within the selected school year.
+              </p>
+            </div>
           </Section>
 
           <Section title="Grade Levels">
@@ -267,8 +284,8 @@ export default function GeneratorPage() {
               >
                 Estimated output
               </h2>
-              <p className="text-white/50 text-xs mt-0.5">
-                {config.academicYear}–{config.academicYear + 1} school year
+              <p className="text-white/50 text-xs mt-0.5 font-mono">
+                {config.academicYear}–{config.academicYear + 1}
               </p>
             </div>
 
