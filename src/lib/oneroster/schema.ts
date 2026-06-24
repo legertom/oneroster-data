@@ -1,8 +1,6 @@
-import { VALID_GRADES } from "./types";
-
 export type FieldDef = {
   required: boolean;
-  type: "string" | "enum" | "boolean" | "date" | "sourcedIdRef" | "sourcedIdList";
+  type: "string" | "enum" | "boolean" | "date" | "sourcedIdRef" | "sourcedIdList" | "gradeList";
   values?: readonly string[];
   refFile?: string;
 };
@@ -19,6 +17,9 @@ const OPTIONAL_STR: FieldDef = { required: false, type: "string" };
 const REQUIRED_STR: FieldDef = { required: true, type: "string" };
 
 const USER_ROLES = ["administrator", "aide", "guardian", "parent", "proctor", "relative", "student", "teacher"] as const;
+// enrollments.csv uses a restricted role vocabulary per OneRoster 1.1 §4.13.5
+const ENROLLMENT_ROLES = ["administrator", "proctor", "student", "teacher"] as const;
+const GRADE_LIST: FieldDef = { required: false, type: "gradeList" };
 
 export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
   "manifest.csv": {
@@ -61,7 +62,7 @@ export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
       sms: OPTIONAL_STR,
       phone: OPTIONAL_STR,
       agentSourcedIds: OPTIONAL_STR,
-      grades: { required: false, type: "enum", values: [...VALID_GRADES, ""] },
+      grades: GRADE_LIST,
       password: OPTIONAL_STR,
     },
   },
@@ -75,7 +76,7 @@ export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
       schoolYearSourcedId: { required: false, type: "sourcedIdRef", refFile: "academicSessions.csv" },
       title: REQUIRED_STR,
       courseCode: OPTIONAL_STR,
-      grades: OPTIONAL_STR,
+      grades: GRADE_LIST,
       orgSourcedId: { required: true, type: "sourcedIdRef", refFile: "orgs.csv" },
       subjects: OPTIONAL_STR,
       subjectCodes: OPTIONAL_STR,
@@ -89,7 +90,7 @@ export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
       status: STATUS_FIELD,
       dateLastModified: DATE_FIELD,
       title: REQUIRED_STR,
-      grades: OPTIONAL_STR,
+      grades: GRADE_LIST,
       courseSourcedId: { required: true, type: "sourcedIdRef", refFile: "courses.csv" },
       classCode: OPTIONAL_STR,
       classType: { required: true, type: "enum", values: ["homeroom", "scheduled"] },
@@ -111,7 +112,7 @@ export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
       classSourcedId: { required: true, type: "sourcedIdRef", refFile: "classes.csv" },
       schoolSourcedId: { required: true, type: "sourcedIdRef", refFile: "orgs.csv" },
       userSourcedId: { required: true, type: "sourcedIdRef", refFile: "users.csv" },
-      role: { required: true, type: "enum", values: USER_ROLES },
+      role: { required: true, type: "enum", values: ENROLLMENT_ROLES },
       primary: { required: false, type: "boolean" },
       beginDate: DATE_FIELD,
       endDate: DATE_FIELD,

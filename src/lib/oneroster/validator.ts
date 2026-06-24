@@ -1,9 +1,11 @@
 import Papa from "papaparse";
 import type { ValidationIssue, FileValidationResult, ValidationSummary } from "./types";
 import { FILE_SCHEMA, MANIFEST_FILE_KEYS } from "./schema";
+import { VALID_GRADES } from "./types";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const BOOL_VALUES = new Set(["true", "false"]);
+const GRADE_SET = new Set<string>(VALID_GRADES);
 
 function parseCSV(text: string): Record<string, string>[] {
   const result = Papa.parse<Record<string, string>>(text, {
@@ -66,6 +68,12 @@ function validateFile(
       } else if (def.type === "enum" && def.values) {
         if (!def.values.includes(value)) {
           issues.push({ row: rowNum, column: field, message: `"${field}" has invalid value "${value}". Expected one of: ${def.values.join(", ")}`, severity: "error" });
+        }
+      } else if (def.type === "gradeList") {
+        // OneRoster grades is a comma-separated list of CEDS grade-level codes
+        const invalid = value.split(",").map((g) => g.trim()).filter((g) => g && !GRADE_SET.has(g));
+        if (invalid.length > 0) {
+          issues.push({ row: rowNum, column: field, message: `"${field}" contains invalid grade code(s): ${invalid.join(", ")}. Expected CEDS codes like KG, 01–12, PK, TK.`, severity: "warning" });
         }
       }
       // sourcedIdRef and sourcedIdList referential checks done in cross-file pass
