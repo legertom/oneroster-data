@@ -26,7 +26,7 @@ export const FILE_SCHEMA: Record<string, FileSchemaDef> = {
     required: true,
     fields: {
       propertyName: REQUIRED_STR,
-      propertyValue: REQUIRED_STR,
+      value: REQUIRED_STR,
     },
   },
 

@@ -360,21 +360,23 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
 
   // ── Manifest ─────────────────────────────────────────────────────────────
   const manifest: ManifestEntry[] = [
-    { propertyName: "manifest.version", propertyValue: "1.0" },
-    { propertyName: "oneroster.version", propertyValue: "1.1" },
-    { propertyName: "file.academicSessions", propertyValue: "bulk" },
-    { propertyName: "file.categories", propertyValue: "absent" },
-    { propertyName: "file.classes", propertyValue: "bulk" },
-    { propertyName: "file.classResources", propertyValue: "absent" },
-    { propertyName: "file.courses", propertyValue: "bulk" },
-    { propertyName: "file.courseResources", propertyValue: "absent" },
-    { propertyName: "file.demographics", propertyValue: includeDemographics ? "bulk" : "absent" },
-    { propertyName: "file.enrollments", propertyValue: "bulk" },
-    { propertyName: "file.lineItems", propertyValue: "absent" },
-    { propertyName: "file.orgs", propertyValue: "bulk" },
-    { propertyName: "file.resources", propertyValue: "absent" },
-    { propertyName: "file.results", propertyValue: "absent" },
-    { propertyName: "file.users", propertyValue: "bulk" },
+    { propertyName: "manifest.version", value: "1.0" },
+    { propertyName: "oneroster.version", value: "1.1" },
+    { propertyName: "file.academicSessions", value: "bulk" },
+    { propertyName: "file.categories", value: "absent" },
+    { propertyName: "file.classes", value: "bulk" },
+    { propertyName: "file.classResources", value: "absent" },
+    { propertyName: "file.courses", value: "bulk" },
+    { propertyName: "file.courseResources", value: "absent" },
+    { propertyName: "file.demographics", value: includeDemographics ? "bulk" : "absent" },
+    { propertyName: "file.enrollments", value: "bulk" },
+    { propertyName: "file.lineItems", value: "absent" },
+    { propertyName: "file.orgs", value: "bulk" },
+    { propertyName: "file.resources", value: "absent" },
+    { propertyName: "file.results", value: "absent" },
+    { propertyName: "file.users", value: "bulk" },
+    { propertyName: "source.systemName", value: "OneRoster Sample Generator" },
+    { propertyName: "source.systemCode", value: "ORSG" },
   ];
 
   return {

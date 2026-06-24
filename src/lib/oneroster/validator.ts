@@ -141,10 +141,24 @@ export async function validateZip(
     const manifestRows = parseCSV(files["manifest.csv"]);
     const manifestMap: Record<string, string> = {};
     for (const row of manifestRows) {
-      manifestMap[row.propertyName] = row.propertyValue;
+      // OneRoster's manifest value column is named "value"; tolerate the
+      // non-standard "propertyValue" header that some tools emit.
+      manifestMap[row.propertyName] = row.value ?? row.propertyValue ?? "";
     }
 
     const manifestIssues: ValidationIssue[] = [];
+
+    // The value column must be named "value" (not "propertyValue"). Clever's
+    // normalizer reads values from a column named exactly "value" and reports
+    // "missing manifest version" if it's named anything else.
+    const manifestHeaders = manifestRows.length > 0 ? Object.keys(manifestRows[0]) : [];
+    if (manifestHeaders.length > 0 && !manifestHeaders.includes("value")) {
+      manifestIssues.push({
+        message: `manifest.csv value column must be named "value" (found ${manifestHeaders.filter((h) => h !== "propertyName").map((h) => `"${h}"`).join(", ") || "none"}). ` +
+          `Clever reads property values from a column named "value"; otherwise every value reads empty and the sync fails with "missing manifest version".`,
+        severity: "error",
+      });
+    }
 
     // manifest.version must be present and exactly "1.0". Clever's normalizer
     // hard-fails with "missing manifest version" otherwise. A common cause is

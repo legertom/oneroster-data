@@ -142,7 +142,9 @@ export interface DemographicsRow {
 
 export interface ManifestEntry {
   propertyName: string;
-  propertyValue: string;
+  // OneRoster 1.1 manifest's value column is named "value" (not "propertyValue").
+  // Clever's normalizer reads values from a column named exactly "value".
+  value: string;
 }
 
 export type FilePresence = "absent" | "bulk" | "delta";
