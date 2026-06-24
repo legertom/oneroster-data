@@ -4,7 +4,8 @@ import type { GeneratedDataset } from "./types";
 
 function toCsv(rows: object[]): string {
   if (rows.length === 0) return "";
-  return Papa.unparse(rows);
+  // Use LF line endings — CRLF can cause issues with some Java CSV parsers
+  return Papa.unparse(rows, { newline: "\n" });
 }
 
 export async function buildZip(dataset: GeneratedDataset): Promise<Blob> {
@@ -22,7 +23,8 @@ export async function buildZip(dataset: GeneratedDataset): Promise<Blob> {
     zip.file("demographics.csv", toCsv(dataset.demographics));
   }
 
-  return zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  // STORE (no compression) is more universally compatible with Java zip readers
+  return zip.generateAsync({ type: "blob", compression: "STORE" });
 }
 
 export async function readZip(file: File): Promise<Record<string, string>> {
