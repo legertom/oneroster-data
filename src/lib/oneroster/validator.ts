@@ -237,6 +237,55 @@ export async function validateZip(
     }
   }
 
+  // ── Clever ingestion check: future-dated terms ────────────────────────────
+  // Clever drops any class whose term startDate is in the future, which
+  // cascades to dropping all enrollments referencing those classes — producing
+  // "required file contains no data: sections.csv / enrollments.csv". Flag it
+  // here as a warning so it's caught before upload, not after a failed sync.
+  const classRows = parsedFiles["classes.csv"];
+  const sessionRows = parsedFiles["academicSessions.csv"];
+  if (classRows && sessionRows) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const sessionStart: Record<string, string> = {};
+    for (const s of sessionRows) {
+      if (s.sourcedId) sessionStart[s.sourcedId] = s.startDate;
+    }
+
+    let futureClassCount = 0;
+    let activeClassCount = 0;
+    for (const cls of classRows) {
+      const termIds = (cls.termSourcedIds ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+      const startsInFuture = termIds.some((tid) => {
+        const start = sessionStart[tid];
+        if (!start || !DATE_RE.test(start)) return false;
+        return new Date(start) > today;
+      });
+      if (termIds.length > 0 && startsInFuture) futureClassCount++;
+      else if (termIds.length > 0) activeClassCount++;
+    }
+
+    if (futureClassCount > 0) {
+      const classesResult = fileResults.find((f) => f.fileName === "classes.csv");
+      const issue = {
+        message:
+          `[Clever] ${futureClassCount} of ${classRows.length} classes reference a term whose ` +
+          `startDate is in the future. Clever drops future-dated classes on ingest, which also ` +
+          `drops their enrollments — these will import as "no data". ` +
+          (activeClassCount === 0
+            ? `No classes have a term that has started yet.`
+            : `Only ${activeClassCount} classes have an active (started) term.`),
+        severity: "warning" as const,
+      };
+      if (classesResult) {
+        classesResult.issues.push(issue);
+        if (classesResult.status === "valid") classesResult.status = "warning";
+      } else {
+        referentialErrors.push(issue);
+      }
+    }
+  }
+
   const totalErrors =
     fileResults.reduce((n, f) => n + f.issues.filter((i) => i.severity === "error").length, 0) + referentialErrors.filter((i) => i.severity === "error").length;
   const totalWarnings =

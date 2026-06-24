@@ -65,10 +65,13 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
     includeDemographics,
   } = config;
 
+  // Term dates. Note: Clever drops any class whose term startDate is in the
+  // future, which cascades to dropping all enrollments. Callers should default
+  // academicYear to a school year that has already started.
   const yearStart = new Date(`${academicYear}-08-15`);
   const fallEnd = new Date(`${academicYear}-12-20`);
   const springStart = new Date(`${academicYear + 1}-01-08`);
-  const yearEnd = new Date(`${academicYear + 1}-06-10`);
+  const yearEnd = new Date(`${academicYear + 1}-06-30`);
 
   // ── Academic sessions ───────────────────────────────────────────────────
   const schoolYearId = uid();

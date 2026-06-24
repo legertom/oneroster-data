@@ -21,13 +21,29 @@ const K12_GRADES: Grade[] = ["KG", "01", "02", "03", "04", "05", "06", "07", "08
 const ELEM_GRADES: Grade[] = ["KG", "01", "02", "03", "04", "05"];
 const MIDDLE_GRADES: Grade[] = ["06", "07", "08"];
 const HIGH_GRADES: Grade[] = ["09", "10", "11", "12"];
-const CURRENT_YEAR = new Date().getFullYear();
+
+// The school year that is currently in session. Clever drops any class whose
+// term startDate is in the future, so the default must be a year that has
+// already started: if we're before ~August, the in-session year started the
+// previous calendar year.
+function currentSchoolYearStart(today = new Date()): number {
+  const y = today.getFullYear();
+  return today.getMonth() >= 7 /* August */ ? y : y - 1;
+}
+const SCHOOL_YEAR_START = currentSchoolYearStart();
+
+// A term whose startDate is after today is dropped by Clever's ingestion.
+// Fall term begins Aug 15 of the academic year — flag any year that hasn't
+// started yet so the user knows sections/enrollments will import empty.
+function isFutureSchoolYear(year: number, today = new Date()): boolean {
+  return new Date(year, 7, 15) > today; // Aug 15 of `year`
+}
 
 const DEFAULT_CONFIG: GeneratorConfig = {
   numSchools: 3,
   studentsPerSchool: 150,
   grades: K12_GRADES,
-  academicYear: CURRENT_YEAR,
+  academicYear: SCHOOL_YEAR_START,
   coursesPerSchool: 8,
   includeDemographics: false,
 };
@@ -170,8 +186,9 @@ export default function GeneratorPage() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">School year</Label>
               <div className="flex flex-wrap gap-2 mt-1">
-                {[2023, 2024, 2025, 2026, 2027, 2028].map((year) => {
+                {[SCHOOL_YEAR_START - 2, SCHOOL_YEAR_START - 1, SCHOOL_YEAR_START, SCHOOL_YEAR_START + 1, SCHOOL_YEAR_START + 2].map((year) => {
                   const active = config.academicYear === year;
+                  const future = isFutureSchoolYear(year);
                   return (
                     <button
                       key={year}
@@ -180,17 +197,32 @@ export default function GeneratorPage() {
                       style={
                         active
                           ? { backgroundColor: "#1464FF", color: "#fff", borderColor: "#1464FF" }
-                          : { backgroundColor: "#fff", color: "#444", borderColor: "#DAEBFF" }
+                          : { backgroundColor: "#fff", color: future ? "#B0975E" : "#444", borderColor: future ? "#FFE478" : "#DAEBFF" }
                       }
+                      title={future ? "This school year hasn't started yet — Clever will drop these classes" : undefined}
                     >
                       {year}–{year + 1}
+                      {future && " ⚠"}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-xs text-muted-foreground pt-1">
-                Generates fall + spring terms within the selected school year.
-              </p>
+              {isFutureSchoolYear(config.academicYear) ? (
+                <div
+                  className="mt-2 rounded-lg px-3 py-2.5 text-xs leading-relaxed"
+                  style={{ backgroundColor: "#FFFBEB", border: "1px solid #FFE478", color: "#7A5C00" }}
+                >
+                  <strong>Heads up:</strong> the {config.academicYear}–{config.academicYear + 1} school
+                  year starts in the future (Aug {config.academicYear}). Clever drops any class whose term
+                  hasn&apos;t started yet, so <strong>sections and enrollments will import empty</strong>.
+                  Pick {SCHOOL_YEAR_START}–{SCHOOL_YEAR_START + 1} (the current school year) for a sync
+                  that ingests cleanly.
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Generates fall + spring terms within the selected school year.
+                </p>
+              )}
             </div>
           </Section>
 
