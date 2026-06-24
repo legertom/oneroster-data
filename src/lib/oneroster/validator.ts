@@ -146,8 +146,23 @@ export async function validateZip(
 
     const manifestIssues: ValidationIssue[] = [];
 
+    // manifest.version must be present and exactly "1.0". Clever's normalizer
+    // hard-fails with "missing manifest version" otherwise. A common cause is
+    // opening manifest.csv in Excel/Numbers, which silently rewrites "1.0" → "1".
+    const manifestVersion = manifestMap["manifest.version"];
+    if (manifestVersion === undefined || manifestVersion === "") {
+      manifestIssues.push({ column: "manifest.version", message: 'Missing required property "manifest.version" (must be "1.0")', severity: "error" });
+    } else if (manifestVersion !== "1.0") {
+      manifestIssues.push({
+        column: "manifest.version",
+        message: `manifest.version is "${manifestVersion}", must be exactly "1.0". ` +
+          `Note: opening the CSV in Excel/Numbers can rewrite "1.0" to "${manifestVersion}".`,
+        severity: "error",
+      });
+    }
+
     if (!manifestMap["oneroster.version"]) {
-      manifestIssues.push({ message: 'Missing required property "oneroster.version"', severity: "error" });
+      manifestIssues.push({ column: "oneroster.version", message: 'Missing required property "oneroster.version"', severity: "error" });
     } else if (manifestMap["oneroster.version"] !== "1.1") {
       manifestIssues.push({ message: `oneroster.version is "${manifestMap["oneroster.version"]}", expected "1.1"`, severity: "warning" });
     }
