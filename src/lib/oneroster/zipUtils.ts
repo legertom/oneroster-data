@@ -4,8 +4,10 @@ import type { GeneratedDataset } from "./types";
 
 function toCsv(rows: object[]): string {
   if (rows.length === 0) return "";
-  // Use LF line endings — CRLF can cause issues with some Java CSV parsers
-  return Papa.unparse(rows, { newline: "\n" });
+  // Use CRLF line endings per RFC 4180 / OneRoster convention. Clever's
+  // manifest parser splits on CRLF; LF-only output makes it read the manifest
+  // as a single line and report "missing manifest version".
+  return Papa.unparse(rows, { newline: "\r\n" });
 }
 
 export async function buildZip(dataset: GeneratedDataset): Promise<Blob> {
