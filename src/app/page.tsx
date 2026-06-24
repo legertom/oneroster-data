@@ -140,7 +140,7 @@ export default function GeneratorPage() {
     try {
       const dataset = generateDataset(config);
       const blob = await buildZip(dataset);
-      downloadBlob(blob, "oneroster11.zip");
+      downloadBlob(blob, "OneRoster.zip");
       setLastStats({
         orgs: dataset.orgs.length,
         users: dataset.users.length,
@@ -409,7 +409,7 @@ export default function GeneratorPage() {
                   (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1464FF";
                 }}
               >
-                {generating ? "Generating…" : "↓ Download oneroster11.zip"}
+                {generating ? "Generating…" : "↓ Download OneRoster.zip"}
               </button>
             </div>
           </div>
