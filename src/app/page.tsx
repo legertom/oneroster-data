@@ -69,7 +69,7 @@ export default function GeneratorPage() {
     try {
       const dataset = generateDataset(config);
       const blob = await buildZip(dataset);
-      downloadBlob(blob, `oneroster-${config.academicYear}-${config.academicYear + 1}.zip`);
+      downloadBlob(blob, "oneroster11.zip");
       setLastStats({
         orgs: dataset.orgs.length,
         users: dataset.users.length,
