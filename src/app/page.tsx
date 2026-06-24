@@ -2,20 +2,14 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { generateDataset } from "@/lib/oneroster/generator";
 import { buildZip, downloadBlob } from "@/lib/oneroster/zipUtils";
 import type { GeneratorConfig, Grade } from "@/lib/oneroster/types";
 import { VALID_GRADES } from "@/lib/oneroster/types";
-
-function sliderVal(v: number | readonly number[]): number {
-  return Array.isArray(v) ? (v as number[])[0] : (v as number);
-}
 
 const GRADE_LABELS: Record<string, string> = {
   UI: "UI", PK: "PK", TK: "TK", KG: "KG",
@@ -28,7 +22,6 @@ const K12_GRADES: Grade[] = ["KG", "01", "02", "03", "04", "05", "06", "07", "08
 const ELEM_GRADES: Grade[] = ["KG", "01", "02", "03", "04", "05"];
 const MIDDLE_GRADES: Grade[] = ["06", "07", "08"];
 const HIGH_GRADES: Grade[] = ["09", "10", "11", "12"];
-
 const CURRENT_YEAR = new Date().getFullYear();
 
 const DEFAULT_CONFIG: GeneratorConfig = {
@@ -39,6 +32,66 @@ const DEFAULT_CONFIG: GeneratorConfig = {
   coursesPerSchool: 8,
   includeDemographics: false,
 };
+
+function sliderVal(v: number | readonly number[]): number {
+  return Array.isArray(v) ? (v as number[])[0] : (v as number);
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border bg-white overflow-hidden">
+      <div className="px-5 py-3 border-b border-border" style={{ backgroundColor: "#DAEBFF" }}>
+        <h2
+          className="text-sm font-bold tracking-tight"
+          style={{ color: "#0A1E46", fontFamily: "var(--font-merriweather)" }}
+        >
+          {title}
+        </h2>
+      </div>
+      <div className="px-5 py-5">{children}</div>
+    </div>
+  );
+}
+
+function SliderRow({
+  label,
+  value,
+  min,
+  max,
+  step,
+  hint,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  hint?: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-baseline">
+        <Label className="text-sm font-medium text-foreground">{label}</Label>
+        <span
+          className="text-base font-bold tabular-nums"
+          style={{ color: "#1464FF" }}
+        >
+          {value.toLocaleString()}
+        </span>
+      </div>
+      <Slider
+        min={min}
+        max={max}
+        step={step}
+        value={[value]}
+        onValueChange={(v) => onChange(sliderVal(v))}
+      />
+      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
 
 export default function GeneratorPage() {
   const [config, setConfig] = useState<GeneratorConfig>(DEFAULT_CONFIG);
@@ -58,10 +111,10 @@ export default function GeneratorPage() {
     );
   }
 
-  const estimatedStudents = config.numSchools * config.studentsPerSchool;
-  const estimatedTeachers = config.numSchools * config.coursesPerSchool;
-  const estimatedClasses = config.numSchools * config.coursesPerSchool * 2;
-  const estimatedEnrollments = estimatedStudents * 5 + estimatedTeachers * 2;
+  const estStudents = config.numSchools * config.studentsPerSchool;
+  const estTeachers = config.numSchools * config.coursesPerSchool;
+  const estClasses = config.numSchools * config.coursesPerSchool * 2;
+  const estEnrollments = estStudents * 5 + estTeachers * 2;
 
   async function handleGenerate() {
     if (config.grades.length === 0) return;
@@ -83,78 +136,50 @@ export default function GeneratorPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">OneRoster 1.1 Generator</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Generate a realistic sample district zip containing all required OneRoster 1.1 CSV files.
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      {/* Page header */}
+      <div className="mb-8">
+        <h1
+          className="text-3xl font-bold tracking-tight"
+          style={{ color: "#0A1E46", fontFamily: "var(--font-merriweather)" }}
+        >
+          OneRoster 1.1{" "}
+          <span style={{ color: "#1464FF" }}>Generator</span>
+        </h1>
+        <p className="mt-2 text-muted-foreground text-sm max-w-xl">
+          Configure the parameters below and download a complete, spec-compliant district zip
+          containing all required OneRoster 1.1 CSV files.
         </p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">District Structure</CardTitle>
-              <CardDescription>Configure the shape of the generated district.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <Label>Number of schools</Label>
-                  <span className="font-mono text-muted-foreground">{config.numSchools}</span>
-                </div>
-                <Slider min={1} max={12} step={1} value={[config.numSchools]}
-                  onValueChange={(v) => set("numSchools", sliderVal(v))} />
-                <p className="text-xs text-muted-foreground">Plus 1 district org.</p>
-              </div>
+        {/* Left: config */}
+        <div className="lg:col-span-2 space-y-5">
+          <Section title="District Structure">
+            <div className="space-y-6">
+              <SliderRow label="Number of schools" value={config.numSchools} min={1} max={12} step={1}
+                hint="Plus 1 district org." onChange={(v) => set("numSchools", v)} />
+              <SliderRow label="Students per school" value={config.studentsPerSchool} min={10} max={1000} step={10}
+                onChange={(v) => set("studentsPerSchool", v)} />
+              <SliderRow label="Courses per school" value={config.coursesPerSchool} min={2} max={20} step={1}
+                hint="Each course gets one class per term (fall + spring)."
+                onChange={(v) => set("coursesPerSchool", v)} />
+            </div>
+          </Section>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <Label>Students per school</Label>
-                  <span className="font-mono text-muted-foreground">{config.studentsPerSchool}</span>
-                </div>
-                <Slider min={10} max={1000} step={10} value={[config.studentsPerSchool]}
-                  onValueChange={(v) => set("studentsPerSchool", sliderVal(v))} />
-              </div>
+          <Section title="Academic Year">
+            <SliderRow
+              label="Start year"
+              value={config.academicYear}
+              min={2020} max={2030} step={1}
+              hint={`School year ${config.academicYear}–${config.academicYear + 1} with fall + spring terms.`}
+              onChange={(v) => set("academicYear", v)}
+            />
+          </Section>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <Label>Courses per school</Label>
-                  <span className="font-mono text-muted-foreground">{config.coursesPerSchool}</span>
-                </div>
-                <Slider min={2} max={20} step={1} value={[config.coursesPerSchool]}
-                  onValueChange={(v) => set("coursesPerSchool", sliderVal(v))} />
-                <p className="text-xs text-muted-foreground">Each course gets one class per term (fall + spring).</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Academic Year</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <Label>Start year</Label>
-                  <span className="font-mono text-muted-foreground">
-                    {config.academicYear}–{config.academicYear + 1}
-                  </span>
-                </div>
-                <Slider min={2020} max={2030} step={1} value={[config.academicYear]}
-                  onValueChange={(v) => set("academicYear", sliderVal(v))} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Grade Levels</CardTitle>
-              <CardDescription>Select which grades to include.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2 flex-wrap">
+          <Section title="Grade Levels">
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-2">
                 {[
                   ["K–12", K12_GRADES],
                   ["Elementary", ELEM_GRADES],
@@ -162,91 +187,144 @@ export default function GeneratorPage() {
                   ["High School", HIGH_GRADES],
                   ["All", [...VALID_GRADES]],
                 ].map(([label, preset]) => (
-                  <Button key={String(label)} size="sm" variant="outline"
-                    onClick={() => set("grades", preset as Grade[])}>
+                  <button
+                    key={String(label)}
+                    onClick={() => set("grades", preset as Grade[])}
+                    className="px-3 py-1 rounded text-xs font-medium border transition-colors"
+                    style={{ borderColor: "#1464FF", color: "#1464FF" }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1464FF";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#fff";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLButtonElement).style.backgroundColor = "transparent";
+                      (e.currentTarget as HTMLButtonElement).style.color = "#1464FF";
+                    }}
+                  >
                     {label}
-                  </Button>
+                  </button>
                 ))}
-                <Button size="sm" variant="outline" onClick={() => set("grades", [])}>None</Button>
+                <button
+                  onClick={() => set("grades", [])}
+                  className="px-3 py-1 rounded text-xs font-medium border border-border text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  Clear
+                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
+
+              <div className="flex flex-wrap gap-2 pt-1">
                 {VALID_GRADES.map((grade) => {
                   const active = config.grades.includes(grade);
                   return (
-                    <button key={grade} onClick={() => toggleGrade(grade)}
-                      className={`px-3 py-1 rounded-md text-xs font-mono border transition-colors ${
+                    <button
+                      key={grade}
+                      onClick={() => toggleGrade(grade)}
+                      className="w-10 h-10 rounded-lg text-xs font-bold transition-all border"
+                      style={
                         active
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-muted text-muted-foreground border-transparent hover:border-border"
-                      }`}>
+                          ? { backgroundColor: "#1464FF", color: "#fff", borderColor: "#1464FF" }
+                          : { backgroundColor: "#fff", color: "#666", borderColor: "#DAEBFF" }
+                      }
+                    >
                       {GRADE_LABELS[grade]}
                     </button>
                   );
                 })}
               </div>
               {config.grades.length === 0 && (
-                <p className="text-xs text-destructive">Select at least one grade.</p>
+                <p className="text-xs text-destructive">Select at least one grade to continue.</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </Section>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Options</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2">
-                <Checkbox id="demographics" checked={config.includeDemographics}
-                  onCheckedChange={(v) => set("includeDemographics", !!v)} />
-                <Label htmlFor="demographics" className="cursor-pointer text-sm">
-                  Include{" "}
-                  <code className="text-xs bg-muted px-1 py-0.5 rounded">demographics.csv</code>
-                </Label>
-              </div>
-            </CardContent>
-          </Card>
+          <Section title="Options">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="demographics"
+                checked={config.includeDemographics}
+                onCheckedChange={(v) => set("includeDemographics", !!v)}
+              />
+              <Label htmlFor="demographics" className="cursor-pointer text-sm">
+                Include{" "}
+                <code className="text-xs font-mono bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded">
+                  demographics.csv
+                </code>
+              </Label>
+            </div>
+          </Section>
         </div>
 
-        <div className="space-y-4">
-          <Card className="sticky top-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Estimated Output</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-sm space-y-2">
-                {([
-                  ["Orgs", config.numSchools + 1],
-                  ["Students", estimatedStudents],
-                  ["Teachers", estimatedTeachers],
-                  ["Courses", config.numSchools * config.coursesPerSchool],
-                  ["Classes", estimatedClasses],
-                  ["Enrollments", estimatedEnrollments],
-                  ["Academic sessions", 3],
-                ] as [string, number][]).map(([label, count]) => (
-                  <div key={label} className="flex justify-between">
-                    <span className="text-muted-foreground">{label}</span>
-                    <span className="font-mono text-xs">{count.toLocaleString()}</span>
-                  </div>
+        {/* Right: summary + generate */}
+        <div className="space-y-5">
+          <div
+            className="rounded-xl overflow-hidden border border-border sticky top-6"
+            style={{ backgroundColor: "#0A1E46" }}
+          >
+            <div className="px-5 py-4 border-b border-white/10">
+              <h2
+                className="text-base font-bold text-white"
+                style={{ fontFamily: "var(--font-merriweather)" }}
+              >
+                Estimated output
+              </h2>
+              <p className="text-white/50 text-xs mt-0.5">
+                {config.academicYear}–{config.academicYear + 1} school year
+              </p>
+            </div>
+
+            <div className="px-5 py-4 space-y-3">
+              {([
+                ["Orgs", config.numSchools + 1],
+                ["Students", estStudents],
+                ["Teachers", estTeachers],
+                ["Courses", config.numSchools * config.coursesPerSchool],
+                ["Classes", estClasses],
+                ["Enrollments", estEnrollments],
+                ["Academic sessions", 3],
+              ] as [string, number][]).map(([label, count]) => (
+                <div key={label} className="flex justify-between items-center">
+                  <span className="text-white/60 text-sm">{label}</span>
+                  <span className="text-white font-bold font-mono text-sm tabular-nums">
+                    {count.toLocaleString()}
+                  </span>
+                </div>
+              ))}
+
+              <Separator className="bg-white/10" />
+
+              <div className="text-white/40 text-xs leading-relaxed">
+                {["manifest.csv", "orgs.csv", "users.csv", "courses.csv", "classes.csv", "enrollments.csv", "academicSessions.csv", ...(config.includeDemographics ? ["demographics.csv"] : [])].map((f) => (
+                  <span key={f} className="block font-mono">{f}</span>
                 ))}
               </div>
-              <Separator />
-              <p className="text-xs text-muted-foreground">
-                Files: manifest, orgs, users, courses, classes, enrollments, academicSessions
-                {config.includeDemographics ? ", demographics" : ""}
-              </p>
-              <Button className="w-full" onClick={handleGenerate}
-                disabled={generating || config.grades.length === 0}>
-                {generating ? "Generating…" : "Download zip"}
-              </Button>
-            </CardContent>
-          </Card>
 
+              <button
+                onClick={handleGenerate}
+                disabled={generating || config.grades.length === 0}
+                className="w-full mt-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: "#1464FF", color: "#fff" }}
+                onMouseEnter={(e) => {
+                  if (!generating && config.grades.length > 0)
+                    (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#0e50d6";
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLButtonElement).style.backgroundColor = "#1464FF";
+                }}
+              >
+                {generating ? "Generating…" : "↓ Download oneroster11.zip"}
+              </button>
+            </div>
+          </div>
+
+          {/* Post-generate stats */}
           {lastStats && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-green-600 dark:text-green-400">Last generated</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-1.5">
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#4ECC97" }}>
+              <div className="px-4 py-2.5" style={{ backgroundColor: "#4ECC97" }}>
+                <span className="text-xs font-bold" style={{ color: "#0A1E46" }}>
+                  Generated successfully
+                </span>
+              </div>
+              <div className="px-4 py-3 space-y-1.5 bg-white">
                 {([
                   ["orgs.csv", lastStats.orgs],
                   ["users.csv", lastStats.users],
@@ -255,12 +333,14 @@ export default function GeneratorPage() {
                   ["enrollments.csv", lastStats.enrollments],
                 ] as [string, number][]).map(([file, count]) => (
                   <div key={file} className="flex justify-between text-xs">
-                    <code className="text-muted-foreground">{file}</code>
-                    <Badge variant="secondary">{count.toLocaleString()} rows</Badge>
+                    <code className="text-muted-foreground font-mono">{file}</code>
+                    <span className="font-bold tabular-nums" style={{ color: "#1464FF" }}>
+                      {count.toLocaleString()} rows
+                    </span>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>

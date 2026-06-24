@@ -1,9 +1,6 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { readZip } from "@/lib/oneroster/zipUtils";
 import { validateZip } from "@/lib/oneroster/validator";
@@ -11,71 +8,91 @@ import type { ValidationSummary, FileValidationResult } from "@/lib/oneroster/ty
 
 type State = "idle" | "loading" | "done";
 
-function StatusBadge({ status }: { status: FileValidationResult["status"] }) {
-  const variants: Record<string, string> = {
-    valid: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
-    error: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
-    warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
-    skipped: "bg-muted text-muted-foreground",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${variants[status] ?? variants.skipped}`}>
-      {status}
-    </span>
-  );
-}
-
 function FileResult({ result }: { result: FileValidationResult }) {
   const [open, setOpen] = useState(result.status === "error");
   const errors = result.issues.filter((i) => i.severity === "error");
   const warnings = result.issues.filter((i) => i.severity === "warning");
 
+  const statusColors = {
+    valid: { bg: "#F0FDF4", border: "#4ECC97", dot: "#4ECC97", label: "Valid" },
+    error: { bg: "#FFF1F1", border: "#EF4444", dot: "#EF4444", label: "Error" },
+    warning: { bg: "#FFFBEB", border: "#F78239", dot: "#F78239", label: "Warning" },
+    skipped: { bg: "#F9FAFB", border: "#D1D5DB", dot: "#9CA3AF", label: "Skipped" },
+  };
+  const s = statusColors[result.status];
+
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: s.border }}>
       <button
-        className="w-full flex items-center justify-between px-4 py-3 text-sm hover:bg-muted/50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors"
+        style={{ backgroundColor: s.bg }}
         onClick={() => setOpen((o) => !o)}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <code className="text-xs font-mono truncate">{result.fileName}</code>
-          <StatusBadge status={result.status} />
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.dot }} />
+          <code className="text-sm font-mono font-medium text-foreground truncate">
+            {result.fileName}
+          </code>
+          <span
+            className="text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ backgroundColor: s.dot + "20", color: s.dot }}
+          >
+            {s.label}
+          </span>
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-3">
+        <div className="flex items-center gap-4 shrink-0 ml-4">
           {errors.length > 0 && (
-            <span className="text-xs text-red-600 dark:text-red-400">{errors.length} error{errors.length !== 1 ? "s" : ""}</span>
+            <span className="text-xs font-medium" style={{ color: "#EF4444" }}>
+              {errors.length} error{errors.length !== 1 ? "s" : ""}
+            </span>
           )}
           {warnings.length > 0 && (
-            <span className="text-xs text-yellow-600 dark:text-yellow-500">{warnings.length} warning{warnings.length !== 1 ? "s" : ""}</span>
+            <span className="text-xs font-medium" style={{ color: "#F78239" }}>
+              {warnings.length} warning{warnings.length !== 1 ? "s" : ""}
+            </span>
           )}
-          <span className="text-xs text-muted-foreground">{result.rowCount.toLocaleString()} rows</span>
-          <span className="text-muted-foreground">{open ? "▲" : "▼"}</span>
+          <span className="text-xs text-muted-foreground font-mono tabular-nums">
+            {result.rowCount.toLocaleString()} rows
+          </span>
+          <span className="text-muted-foreground text-xs">{open ? "▲" : "▼"}</span>
         </div>
       </button>
 
-      {open && result.issues.length > 0 && (
-        <div className="border-t bg-muted/20">
-          <div className="divide-y">
-            {result.issues.map((issue, idx) => (
-              <div key={idx} className="px-4 py-2 text-xs flex gap-3">
-                <span className={issue.severity === "error"
-                  ? "text-red-600 dark:text-red-400 font-medium shrink-0"
-                  : "text-yellow-600 dark:text-yellow-500 font-medium shrink-0"}>
-                  {issue.severity === "error" ? "ERR" : "WARN"}
-                </span>
-                {issue.row && (
-                  <span className="text-muted-foreground font-mono shrink-0">row {issue.row}</span>
-                )}
-                {issue.column && (
-                  <code className="text-muted-foreground shrink-0">{issue.column}</code>
-                )}
-                <span className="text-foreground">{issue.message}</span>
-              </div>
-            ))}
-          </div>
+      {open && (
+        <div className="bg-white">
+          {result.issues.length === 0 ? (
+            <div className="px-5 py-3 text-sm text-muted-foreground border-t border-border">
+              No issues found.
+            </div>
+          ) : (
+            <div className="divide-y divide-border max-h-72 overflow-y-auto">
+              {result.issues.map((issue, idx) => (
+                <div key={idx} className="px-5 py-2.5 flex gap-4 text-xs">
+                  <span
+                    className="font-bold shrink-0 w-10"
+                    style={{ color: issue.severity === "error" ? "#EF4444" : "#F78239" }}
+                  >
+                    {issue.severity === "error" ? "ERR" : "WARN"}
+                  </span>
+                  {issue.row && (
+                    <span className="text-muted-foreground font-mono shrink-0 w-14">
+                      row {issue.row}
+                    </span>
+                  )}
+                  {issue.column && (
+                    <code
+                      className="shrink-0 px-1 rounded text-xs"
+                      style={{ backgroundColor: "#DAEBFF", color: "#0A1E46" }}
+                    >
+                      {issue.column}
+                    </code>
+                  )}
+                  <span className="text-foreground">{issue.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      {open && result.issues.length === 0 && (
-        <div className="border-t bg-muted/20 px-4 py-2 text-xs text-muted-foreground">No issues found.</div>
       )}
     </div>
   );
@@ -104,7 +121,7 @@ export default function ValidatePage() {
     } catch (e) {
       console.error(e);
       setState("idle");
-      alert("Failed to read zip file. Make sure it is a valid .zip archive.");
+      alert("Failed to read the zip file. Make sure it is a valid .zip archive.");
     }
   }, []);
 
@@ -127,12 +144,19 @@ export default function ValidatePage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">OneRoster 1.1 Validator</h1>
-        <p className="text-muted-foreground mt-1 text-sm">
-          Upload a OneRoster 1.1 zip to check for spec compliance, required fields, enum values, and referential integrity.
-          All processing happens in your browser — no data is uploaded to a server.
+    <div className="max-w-5xl mx-auto px-6 py-10">
+      <div className="mb-8">
+        <h1
+          className="text-3xl font-bold tracking-tight"
+          style={{ color: "#0A1E46", fontFamily: "var(--font-merriweather)" }}
+        >
+          OneRoster 1.1{" "}
+          <span style={{ color: "#1464FF" }}>Validator</span>
+        </h1>
+        <p className="mt-2 text-muted-foreground text-sm max-w-xl">
+          Upload any OneRoster 1.1 zip to check for spec compliance — manifest integrity, required
+          fields, valid enum values, date formats, and cross-file referential integrity.
+          Nothing leaves your browser.
         </p>
       </div>
 
@@ -142,63 +166,89 @@ export default function ValidatePage() {
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors mb-6 ${
-          dragging
-            ? "border-primary bg-primary/5"
-            : "border-muted-foreground/25 hover:border-muted-foreground/50 hover:bg-muted/30"
-        }`}
+        className="rounded-2xl border-2 border-dashed cursor-pointer transition-all mb-8"
+        style={{
+          borderColor: dragging ? "#1464FF" : "#DAEBFF",
+          backgroundColor: dragging ? "#EFF6FF" : "#F8FBFF",
+        }}
       >
         <input ref={inputRef} type="file" accept=".zip" className="hidden" onChange={onFileChange} />
-        <div className="space-y-2">
-          <div className="text-3xl">📦</div>
-          <p className="text-sm font-medium">
-            {state === "loading" ? "Validating…" : "Drop a OneRoster zip here"}
-          </p>
-          <p className="text-xs text-muted-foreground">or click to browse</p>
+        <div className="py-16 flex flex-col items-center gap-3">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl"
+            style={{ backgroundColor: "#DAEBFF" }}
+          >
+            📦
+          </div>
+          <div className="text-center">
+            <p className="font-semibold text-sm" style={{ color: "#0A1E46" }}>
+              {state === "loading" ? "Validating…" : "Drop your OneRoster zip here"}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {state === "loading" ? "Parsing CSV files and checking referential integrity" : "or click to browse"}
+            </p>
+          </div>
+          {state === "idle" && (
+            <button
+              className="mt-1 px-4 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors"
+              style={{ backgroundColor: "#1464FF" }}
+              onClick={(e) => { e.stopPropagation(); inputRef.current?.click(); }}
+            >
+              Browse files
+            </button>
+          )}
         </div>
       </div>
 
       {state === "done" && summary && (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Summary bar */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">
-                Results for{" "}
-                <code className="text-sm font-mono">{fileName}</code>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className={`text-2xl font-bold ${summary.totalErrors > 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>
+          <div
+            className="rounded-2xl p-6"
+            style={{ backgroundColor: "#0A1E46" }}
+          >
+            <div className="flex flex-wrap items-center gap-8">
+              <div>
+                <p className="text-white/50 text-xs uppercase tracking-widest mb-1">File</p>
+                <p className="text-white font-mono text-sm font-medium">{fileName}</p>
+              </div>
+              <Separator orientation="vertical" className="h-10 bg-white/10 hidden sm:block" />
+              <div className="flex gap-8">
+                <div>
+                  <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Errors</p>
+                  <p
+                    className="text-2xl font-bold font-mono tabular-nums"
+                    style={{ color: summary.totalErrors > 0 ? "#EF4444" : "#4ECC97" }}
+                  >
                     {summary.totalErrors}
-                  </span>
-                  <span className="text-muted-foreground">error{summary.totalErrors !== 1 ? "s" : ""}</span>
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-2xl font-bold ${summary.totalWarnings > 0 ? "text-yellow-600 dark:text-yellow-500" : "text-muted-foreground"}`}>
+                <div>
+                  <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Warnings</p>
+                  <p
+                    className="text-2xl font-bold font-mono tabular-nums"
+                    style={{ color: summary.totalWarnings > 0 ? "#F78239" : "rgba(255,255,255,0.4)" }}
+                  >
                     {summary.totalWarnings}
-                  </span>
-                  <span className="text-muted-foreground">warning{summary.totalWarnings !== 1 ? "s" : ""}</span>
+                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold">{summary.filesChecked}</span>
-                  <span className="text-muted-foreground">files checked</span>
+                <div>
+                  <p className="text-white/50 text-xs uppercase tracking-widest mb-1">Files</p>
+                  <p className="text-2xl font-bold font-mono tabular-nums text-white">
+                    {summary.filesChecked}
+                  </p>
                 </div>
               </div>
-              {summary.totalErrors === 0 && summary.totalWarnings === 0 && (
-                <p className="mt-3 text-sm text-green-600 dark:text-green-400 font-medium">
-                  All checks passed. This looks like valid OneRoster 1.1 data.
-                </p>
+              {summary.totalErrors === 0 && (
+                <div
+                  className="ml-auto px-4 py-2 rounded-xl text-sm font-semibold"
+                  style={{ backgroundColor: "#4ECC97", color: "#0A1E46" }}
+                >
+                  {summary.totalWarnings === 0 ? "✓ Fully valid" : "✓ No errors"}
+                </div>
               )}
-              {summary.totalErrors === 0 && summary.totalWarnings > 0 && (
-                <p className="mt-3 text-sm text-yellow-600 dark:text-yellow-500">
-                  No errors, but there are warnings worth reviewing.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Per-file results */}
           <div className="space-y-2">
@@ -212,33 +262,50 @@ export default function ValidatePage() {
               ))}
           </div>
 
-          {/* Referential integrity errors */}
+          {/* Referential integrity */}
           {summary.referentialErrors.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
+            <div className="rounded-xl border overflow-hidden" style={{ borderColor: "#EF4444" }}>
+              <div
+                className="px-5 py-3 flex items-center gap-3"
+                style={{ backgroundColor: "#FFF1F1" }}
+              >
+                <span className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
+                <h3
+                  className="text-sm font-bold"
+                  style={{ color: "#0A1E46", fontFamily: "var(--font-merriweather)" }}
+                >
                   Referential Integrity
-                  <Badge variant="destructive">{summary.referentialErrors.length} issue{summary.referentialErrors.length !== 1 ? "s" : ""}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1 max-h-96 overflow-y-auto">
-                  {summary.referentialErrors.map((issue, idx) => (
-                    <div key={idx} className="text-xs flex gap-3 py-1 border-b last:border-0">
-                      <span className="text-red-600 dark:text-red-400 font-medium shrink-0">ERR</span>
-                      {issue.row && <span className="text-muted-foreground font-mono shrink-0">row {issue.row}</span>}
-                      <span>{issue.message}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                </h3>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: "#EF444420", color: "#EF4444" }}
+                >
+                  {summary.referentialErrors.length} issue{summary.referentialErrors.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="bg-white max-h-80 overflow-y-auto divide-y divide-border">
+                {summary.referentialErrors.map((issue, idx) => (
+                  <div key={idx} className="px-5 py-2.5 flex gap-4 text-xs">
+                    <span className="font-bold text-red-500 shrink-0 w-10">ERR</span>
+                    {issue.row && (
+                      <span className="text-muted-foreground font-mono shrink-0 w-14">
+                        row {issue.row}
+                      </span>
+                    )}
+                    <span className="text-foreground">{issue.message}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
-          <Separator />
-          <Button variant="outline" onClick={() => { setState("idle"); setSummary(null); setFileName(null); }}>
-            Validate another file
-          </Button>
+          <button
+            onClick={() => { setState("idle"); setSummary(null); setFileName(null); }}
+            className="text-sm font-medium transition-colors"
+            style={{ color: "#1464FF" }}
+          >
+            ← Validate another file
+          </button>
         </div>
       )}
     </div>
