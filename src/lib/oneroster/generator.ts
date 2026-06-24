@@ -63,21 +63,46 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
     academicYear,
     coursesPerSchool,
     includeDemographics,
+    termStructure,
   } = config;
 
-  // Term dates. Note: Clever drops any class whose term startDate is in the
-  // future, which cascades to dropping all enrollments. Callers should default
-  // academicYear to a school year that has already started.
-  const yearStart = new Date(`${academicYear}-08-15`);
-  const fallEnd = new Date(`${academicYear}-12-20`);
-  const springStart = new Date(`${academicYear + 1}-01-08`);
-  const yearEnd = new Date(`${academicYear + 1}-06-30`);
+  // The school year spans Aug 1 → Jul 31 (a continuous 12-month window).
+  // Because the default academicYear is the in-session year, "today" always
+  // falls within this span — so the school year and its terms are always
+  // currently in progress, guaranteeing the data shows current classes.
+  const yearStart = new Date(`${academicYear}-08-01`);
+  const yearEnd = new Date(`${academicYear + 1}-07-31`);
+
+  const schoolYearId = uid();
+
+  // Define the set of terms based on the chosen structure. A "term"-type
+  // academic session is what normalizes into a section's term.
+  const terms: { id: string; title: string; startDate: Date; endDate: Date }[] =
+    termStructure === "yearRound"
+      ? [
+          {
+            id: uid(),
+            title: `${academicYear}-${academicYear + 1} Year-Round`,
+            startDate: yearStart,
+            endDate: yearEnd,
+          },
+        ]
+      : [
+          {
+            id: uid(),
+            title: `Fall ${academicYear}`,
+            startDate: new Date(`${academicYear}-08-15`),
+            endDate: new Date(`${academicYear}-12-20`),
+          },
+          {
+            id: uid(),
+            title: `Spring ${academicYear + 1}`,
+            startDate: new Date(`${academicYear + 1}-01-08`),
+            endDate: new Date(`${academicYear + 1}-07-31`),
+          },
+        ];
 
   // ── Academic sessions ───────────────────────────────────────────────────
-  const schoolYearId = uid();
-  const fallTermId = uid();
-  const springTermId = uid();
-
   const academicSessions: AcademicSessionRow[] = [
     {
       sourcedId: schoolYearId,
@@ -90,30 +115,19 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
       parentSourcedId: "",
       schoolYear: String(academicYear + 1),
     },
-    {
-      sourcedId: fallTermId,
-      status: "active",
+    ...terms.map((t) => ({
+      sourcedId: t.id,
+      status: "active" as const,
       dateLastModified: NOW,
-      title: `Fall ${academicYear}`,
+      title: t.title,
       // Clever maps academicSessions of type "term" to its section terms; a
       // class must reference a term-level session to normalize into a section.
-      type: "term",
-      startDate: isoDate(yearStart),
-      endDate: isoDate(fallEnd),
+      type: "term" as const,
+      startDate: isoDate(t.startDate),
+      endDate: isoDate(t.endDate),
       parentSourcedId: schoolYearId,
       schoolYear: String(academicYear + 1),
-    },
-    {
-      sourcedId: springTermId,
-      status: "active",
-      dateLastModified: NOW,
-      title: `Spring ${academicYear + 1}`,
-      type: "term",
-      startDate: isoDate(springStart),
-      endDate: isoDate(yearEnd),
-      parentSourcedId: schoolYearId,
-      schoolYear: String(academicYear + 1),
-    },
+    })),
   ];
 
   // ── District org ─────────────────────────────────────────────────────────
@@ -180,26 +194,26 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
   for (const schoolId of schoolIds) {
     schoolClassMap[schoolId] = [];
     const courseIds = schoolCourseIds[schoolId];
-    const terms = [fallTermId, springTermId];
 
     for (const courseId of courseIds) {
       const course = courses.find((c) => c.sourcedId === courseId)!;
-      for (const termId of terms) {
+      for (const term of terms) {
         const grade = faker.helpers.arrayElement(grades);
         const classId = uid();
         schoolClassMap[schoolId].push({ classId, courseId, grade });
+        const termLabel = terms.length === 1 ? "" : ` (${term.title.split(" ")[0]})`;
         classes.push({
           sourcedId: classId,
           status: "active",
           dateLastModified: NOW,
-          title: `${course.title} - ${gradeLabel(grade)} (${termId === fallTermId ? "Fall" : "Spring"})`,
+          title: `${course.title} - ${gradeLabel(grade)}${termLabel}`,
           grades: grade,
           courseSourcedId: courseId,
           classCode: `${course.courseCode}-${grade}-${classId.slice(0, 6)}`,
           classType: "scheduled",
           location: `Room ${faker.number.int({ min: 100, max: 399 })}`,
           schoolSourcedId: schoolId,
-          termSourcedIds: termId,
+          termSourcedIds: term.id,
           subjects: course.subjects,
           subjectCodes: course.subjectCodes,
           periods: String(faker.number.int({ min: 1, max: 8 })),

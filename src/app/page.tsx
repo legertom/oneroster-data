@@ -46,6 +46,7 @@ const DEFAULT_CONFIG: GeneratorConfig = {
   academicYear: SCHOOL_YEAR_START,
   coursesPerSchool: 8,
   includeDemographics: false,
+  termStructure: "yearRound",
 };
 
 function sliderVal(v: number | readonly number[]): number {
@@ -126,10 +127,12 @@ export default function GeneratorPage() {
     );
   }
 
+  const termsPerYear = config.termStructure === "yearRound" ? 1 : 2;
   const estStudents = config.numSchools * config.studentsPerSchool;
   const estTeachers = config.numSchools * config.coursesPerSchool;
-  const estClasses = config.numSchools * config.coursesPerSchool * 2;
-  const estEnrollments = estStudents * 5 + estTeachers * 2;
+  const estClasses = config.numSchools * config.coursesPerSchool * termsPerYear;
+  const estEnrollments = estStudents * 5 + estTeachers * termsPerYear;
+  const estSessions = 1 + termsPerYear; // schoolYear + term(s)
 
   async function handleGenerate() {
     if (config.grades.length === 0) return;
@@ -183,46 +186,92 @@ export default function GeneratorPage() {
           </Section>
 
           <Section title="Academic Year">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">School year</Label>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {[SCHOOL_YEAR_START - 2, SCHOOL_YEAR_START - 1, SCHOOL_YEAR_START, SCHOOL_YEAR_START + 1, SCHOOL_YEAR_START + 2].map((year) => {
-                  const active = config.academicYear === year;
-                  const future = isFutureSchoolYear(year);
-                  return (
-                    <button
-                      key={year}
-                      onClick={() => set("academicYear", year)}
-                      className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
-                      style={
-                        active
-                          ? { backgroundColor: "#1464FF", color: "#fff", borderColor: "#1464FF" }
-                          : { backgroundColor: "#fff", color: future ? "#B0975E" : "#444", borderColor: future ? "#FFE478" : "#DAEBFF" }
-                      }
-                      title={future ? "This school year hasn't started yet — Clever will drop these classes" : undefined}
-                    >
-                      {year}–{year + 1}
-                      {future && " ⚠"}
-                    </button>
-                  );
-                })}
-              </div>
-              {isFutureSchoolYear(config.academicYear) ? (
-                <div
-                  className="mt-2 rounded-lg px-3 py-2.5 text-xs leading-relaxed"
-                  style={{ backgroundColor: "#FFFBEB", border: "1px solid #FFE478", color: "#7A5C00" }}
-                >
-                  <strong>Heads up:</strong> the {config.academicYear}–{config.academicYear + 1} school
-                  year starts in the future (Aug {config.academicYear}). Clever drops any class whose term
-                  hasn&apos;t started yet, so <strong>sections and enrollments will import empty</strong>.
-                  Pick {SCHOOL_YEAR_START}–{SCHOOL_YEAR_START + 1} (the current school year) for a sync
-                  that ingests cleanly.
+            <div className="space-y-5">
+              {/* Term structure */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Term structure</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    ["yearRound", "Year-round", "One continuous term — always active today"],
+                    ["traditional", "Fall + Spring", "Two semesters within the school year"],
+                  ] as const).map(([value, label, desc]) => {
+                    const active = config.termStructure === value;
+                    return (
+                      <button
+                        key={value}
+                        onClick={() => set("termStructure", value)}
+                        className="text-left rounded-lg border px-3 py-2.5 transition-all"
+                        style={
+                          active
+                            ? { backgroundColor: "#1464FF", borderColor: "#1464FF" }
+                            : { backgroundColor: "#fff", borderColor: "#DAEBFF" }
+                        }
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-semibold" style={{ color: active ? "#fff" : "#0A1E46" }}>
+                            {label}
+                          </span>
+                          {value === "yearRound" && (
+                            <span
+                              className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                              style={active ? { backgroundColor: "#fff", color: "#1464FF" } : { backgroundColor: "#DAEBFF", color: "#1464FF" }}
+                            >
+                              RECOMMENDED
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs mt-0.5" style={{ color: active ? "rgba(255,255,255,0.85)" : "#666" }}>
+                          {desc}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground pt-1">
-                  Generates fall + spring terms within the selected school year.
-                </p>
-              )}
+              </div>
+
+              {/* School year */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">School year</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {[SCHOOL_YEAR_START - 2, SCHOOL_YEAR_START - 1, SCHOOL_YEAR_START, SCHOOL_YEAR_START + 1, SCHOOL_YEAR_START + 2].map((year) => {
+                    const active = config.academicYear === year;
+                    const future = isFutureSchoolYear(year);
+                    return (
+                      <button
+                        key={year}
+                        onClick={() => set("academicYear", year)}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold border transition-all"
+                        style={
+                          active
+                            ? { backgroundColor: "#1464FF", color: "#fff", borderColor: "#1464FF" }
+                            : { backgroundColor: "#fff", color: future ? "#B0975E" : "#444", borderColor: future ? "#FFE478" : "#DAEBFF" }
+                        }
+                        title={future ? "This school year hasn't started yet — classes won't be current" : undefined}
+                      >
+                        {year}–{year + 1}
+                        {future && " ⚠"}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isFutureSchoolYear(config.academicYear) ? (
+                  <div
+                    className="mt-2 rounded-lg px-3 py-2.5 text-xs leading-relaxed"
+                    style={{ backgroundColor: "#FFFBEB", border: "1px solid #FFE478", color: "#7A5C00" }}
+                  >
+                    <strong>Heads up:</strong> the {config.academicYear}–{config.academicYear + 1} school
+                    year hasn&apos;t started yet (begins Aug {config.academicYear}), so its classes
+                    won&apos;t be current. Pick {SCHOOL_YEAR_START}–{SCHOOL_YEAR_START + 1} for data with
+                    classes in session today.
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground pt-1">
+                    {config.termStructure === "yearRound"
+                      ? `One continuous term spanning Aug ${config.academicYear} – Jul ${config.academicYear + 1}, active today.`
+                      : `Fall + spring terms within the ${config.academicYear}–${config.academicYear + 1} school year.`}
+                  </p>
+                )}
+              </div>
             </div>
           </Section>
 
@@ -329,7 +378,7 @@ export default function GeneratorPage() {
                 ["Courses", config.numSchools * config.coursesPerSchool],
                 ["Classes", estClasses],
                 ["Enrollments", estEnrollments],
-                ["Academic sessions", 3],
+                ["Academic sessions", estSessions],
               ] as [string, number][]).map(([label, count]) => (
                 <div key={label} className="flex justify-between items-center">
                   <span className="text-white/60 text-sm">{label}</span>

@@ -147,6 +147,11 @@ export interface ManifestEntry {
 
 export type FilePresence = "absent" | "bulk" | "delta";
 
+// "traditional" = Fall + Spring terms; "yearRound" = one continuous 12-month
+// term so that today always falls within an active term (guaranteed current
+// classes regardless of when the data is generated).
+export type TermStructure = "traditional" | "yearRound";
+
 export interface GeneratorConfig {
   numSchools: number;
   studentsPerSchool: number;
@@ -154,6 +159,7 @@ export interface GeneratorConfig {
   academicYear: number; // e.g. 2025 means 2025-2026
   coursesPerSchool: number;
   includeDemographics: boolean;
+  termStructure: TermStructure;
 }
 
 export interface GeneratedDataset {
