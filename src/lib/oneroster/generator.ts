@@ -95,7 +95,9 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
       status: "active",
       dateLastModified: NOW,
       title: `Fall ${academicYear}`,
-      type: "semester",
+      // Clever maps academicSessions of type "term" to its section terms; a
+      // class must reference a term-level session to normalize into a section.
+      type: "term",
       startDate: isoDate(yearStart),
       endDate: isoDate(fallEnd),
       parentSourcedId: schoolYearId,
@@ -106,7 +108,7 @@ export function generateDataset(config: GeneratorConfig): GeneratedDataset {
       status: "active",
       dateLastModified: NOW,
       title: `Spring ${academicYear + 1}`,
-      type: "semester",
+      type: "term",
       startDate: isoDate(springStart),
       endDate: isoDate(yearEnd),
       parentSourcedId: schoolYearId,
